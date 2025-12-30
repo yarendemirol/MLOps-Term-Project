@@ -19,11 +19,26 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas scikit-learn mlflow prefect xgboost fastapi uvicorn numpy
+          pip install pandas scikit-learn mlflow prefect xgboost fastapi uvicorn numpy pytest
+
+  unit-tests:
+    name: Run Unit Tests
+    needs: environment-setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install Dependencies
+        run: pip install pandas numpy scikit-learn pytest
+      - name: Execute Feature Engineering Tests
+        run: pytest src/tests/test_features.py
 
   data-validation:
     name: Data and Stats Validation
-    needs: environment-setup
+    needs: unit-tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
