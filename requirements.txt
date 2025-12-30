@@ -1,8 +1,7 @@
+scikit-learn
+pandas
+mlflow
+prefect
+xgboost
 fastapi
 uvicorn
-pandas
-scikit-learn
-joblib
-mlflow
-xgboost
-matplotlib

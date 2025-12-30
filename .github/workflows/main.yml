@@ -1,4 +1,4 @@
-name: MLOps Continuous Integration
+name: MLOps End-to-End Pipeline
 
 on:
   push:
@@ -7,43 +7,63 @@ on:
     branches: [ main ]
 
 jobs:
-  pipeline-validation:
-    name: Build and Validate Pipeline
+  environment-setup:
+    name: Environment Setup
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
           cache: 'pip'
-
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pandas scikit-learn mlflow prefect xgboost fastapi uvicorn numpy
 
-      - name: Run Model Quality Check
+  data-validation:
+    name: Data and Stats Validation
+    needs: environment-setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install Dependencies
+        run: pip install pandas numpy scikit-learn
+      - name: Check Data Files
         run: |
-          echo "Starting Model Health and Quality Validation..."
-          # Validates if the quality check module is operational
-          python -c "from src.monitoring.quality_check import run_quality_check; print('Monitoring Module: OK')"
+          python -c "import os; assert os.path.exists('data/advertising.csv'), 'Raw data missing!'"
+          python -c "from src.features.prepare_dataset import build_features; print('Data Logic: Verified')"
 
-      - name: Validate Pipeline Architecture
-        run: |
-          echo "Verifying Training Pipeline Structure..."
-          # Checks if the main pipeline can be imported without errors
-          python -c "import pipelines.training_pipeline; print('Pipeline Architecture: Verified')"
+  quality-checks:
+    name: Model Health Checks
+    needs: data-validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install Dependencies
+        run: pip install pandas scikit-learn
+      - name: Run Monitoring Quality Check
+        run: python -c "from src.monitoring.quality_check import run_quality_check; print('Quality Module: OK')"
 
-      - name: Check Feature Engineering Logic
-        run: |
-          echo "Testing Feature Engineering Modules..."
-          python -c "from src.features.build_features import apply_feature_engineering; print('Feature Engineering: OK')"
-
-      - name: Deployment Readiness
-        run: |
-          echo "Final check for deployment artifacts..."
-          echo "CI/CD Pipeline Status: SUCCESS"
+  pipeline-architecture:
+    name: Pipeline Integrity
+    needs: quality-checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install Dependencies
+        run: pip install pandas scikit-learn prefect mlflow xgboost
+      - name: Verify Training Architecture
+        run: python -c "import pipelines.training_pipeline; print('Training Pipeline: Verified')"
