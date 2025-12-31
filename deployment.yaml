@@ -1,1 +1,20 @@
-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ad-click-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ad-click-app
+  template:
+    metadata:
+      labels:
+        app: ad-click-app
+    spec:
+      containers:
+      - name: ad-click-container
+        image: ad-click-prediction:latest
+        imagePullPolicy: Never  
+        ports:
+        - containerPort: 8000
